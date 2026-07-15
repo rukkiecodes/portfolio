@@ -1,0 +1,67 @@
+/* Shared, non-scoped styles used across the section components. Kept global so
+   the section-heading treatment is defined once, not repeated per component. */
+
+/* Kill the browser's default body margin so the app sits flush to the viewport,
+   and paint html/body in the theme background so no white frame shows at the
+   edges (or on overscroll). */
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+html,
+body,
+#__nuxt {
+  background: rgb(var(--fui-theme-background));
+  min-height: 100vh;
+}
+
+/* Font. FusionUI applies --fui-font-family to its own components but leaves the
+   page's own markup alone, so without this the plain h1/p fall back to the
+   browser default (serif). Override the token to Poppins so the whole site —
+   components and page — uses one typeface. */
+:root {
+  --fui-font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+body {
+  font-family: var(--fui-font-family);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.sec-head {
+  max-width: 640px;
+}
+.sec-head__eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--fui-theme-primary));
+}
+.sec-head__title {
+  margin: 12px 0 0;
+  font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+.sec-head__copy {
+  margin: 14px 0 0;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(var(--fui-theme-on-surface), 0.65);
+}
+
+/* Smooth in-page anchor scrolling, offset for the sticky nav. */
+html {
+  scroll-behavior: smooth;
+}
+:target {
+  scroll-margin-top: 80px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
