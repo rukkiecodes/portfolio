@@ -67,7 +67,8 @@ const links = [
 .nav__links {
   display: flex;
   gap: 22px;
-  margin-left: auto;
+  /* Centre the links, which pins the brand to the left and the CTA to the right. */
+  margin: 0 auto;
 }
 .nav__link {
   text-decoration: none;
@@ -87,12 +88,6 @@ const links = [
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.nav__links + .nav__actions {
-  margin-left: 0;
-}
-.nav__links {
-  margin-left: auto;
 }
 .nav__theme {
   display: inline-grid;
