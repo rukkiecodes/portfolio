@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { profile, socials } from '~/data/site'
+
+// Click the portrait to flip the glass and reveal the other side.
+const flipped = ref(false)
 </script>
 
 <template>
@@ -38,10 +42,35 @@ import { profile, socials } from '~/data/site'
            Each tile is a positioned wrapper around an FGlass, because FGlass sets
            its own position and would otherwise ignore the placement. -->
       <div class="hero__stage">
-        <div class="hero__portrait">
-          <f-glass :radius="28" :blur="2" :depth="10" interactive>
-            <img src="/portrait.png" alt="rukkiecodes portrait" class="hero__portrait-img" />
-          </f-glass>
+        <div
+          class="hero__portrait"
+          :class="{ 'is-flipped': flipped }"
+          role="button"
+          tabindex="0"
+          :aria-label="flipped ? 'Flip back to portrait' : 'Flip to see the other side'"
+          @click="flipped = !flipped"
+          @keydown.enter="flipped = !flipped"
+          @keydown.space.prevent="flipped = !flipped"
+        >
+          <div class="flip">
+            <div class="flip__face flip__front">
+              <f-glass :radius="28" :blur="2" :depth="10" interactive>
+                <img src="/portrait.png" alt="rukkiecodes portrait" class="hero__portrait-img" />
+              </f-glass>
+            </div>
+            <div class="flip__face flip__back">
+              <f-glass :radius="28" :blur="2" :depth="10">
+                <img
+                  src="/portrait-back.png"
+                  alt="rukkiecodes — the other side"
+                  class="hero__portrait-img hero__portrait-img--back"
+                />
+              </f-glass>
+            </div>
+          </div>
+          <span class="hero__flip-hint" aria-hidden="true">
+            <f-icon icon="refresh-cw" size="small" /> {{ flipped ? 'the other side' : 'click to flip' }}
+          </span>
         </div>
 
         <div class="hero__tile hero__tile--top">
@@ -189,16 +218,70 @@ import { profile, socials } from '~/data/site'
   position: absolute;
   inset: 0 30px 0 30px;
   z-index: 1;
+  perspective: 1500px;
+  cursor: pointer;
 }
-.hero__portrait > * {
+.hero__portrait:focus-visible {
+  outline: 2px solid rgb(var(--fui-theme-primary));
+  outline-offset: 6px;
+  border-radius: 30px;
+}
+.flip {
+  position: relative;
+  width: 100%;
   height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.85s cubic-bezier(0.4, 0.12, 0.2, 1);
+}
+.hero__portrait.is-flipped .flip {
+  transform: rotateY(180deg);
+}
+.flip__face {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
   overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip__face > * {
+  width: 100%;
+  height: 100%;
+}
+.flip__back {
+  transform: rotateY(180deg);
+  /* The other-side art is a transparent cutout — a gradient behind it makes the
+     character read while the glass frame still shows. */
+  background: radial-gradient(120% 120% at 50% 20%, #3a1420 0%, #0c1330 70%);
 }
 .hero__portrait-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
+}
+.hero__portrait-img--back {
+  object-fit: contain;
+  object-position: bottom center;
+}
+.hero__flip-hint {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 .hero__tile {
   position: absolute;
