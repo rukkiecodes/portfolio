@@ -9,6 +9,9 @@ dist
 .env.*
 .vercel
 
+# Private planning docs (describe the non-public admin surface)
+plans/
+
 .vercel
 
 # Local Netlify folder

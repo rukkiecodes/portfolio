@@ -14,7 +14,17 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000',
+      // Supabase (anon key is public and safe to ship) — used only by the
+      // private /studio admin area.
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
+      supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || '',
     },
+  },
+
+  // The secret admin area is client-rendered only — its code never enters the
+  // public SSR bundle, and it is never prerendered.
+  routeRules: {
+    '/studio/**': { ssr: false },
   },
 
   app: {
