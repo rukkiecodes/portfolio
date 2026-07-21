@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { partners } from '~/data/site'
+
+const { data: siteAssets } = useSiteAssets()
 </script>
 
 <template>
@@ -11,7 +13,12 @@ import { partners } from '~/data/site'
       <div class="partners__grid">
         <f-card v-for="p in partners" :key="p.name" type="3" class="partner">
           <template #img>
-            <img :src="p.logo" :alt="p.name" loading="lazy" />
+            <img
+              v-if="siteAssets?.[p.logoKey]"
+              :src="siteAssets[p.logoKey].url"
+              :alt="p.name"
+              loading="lazy"
+            />
           </template>
           <template #title>
             <h3>{{ p.name }}</h3>

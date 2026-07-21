@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import MarkdownIt from 'markdown-it'
 import { computed } from 'vue'
-import { getProject, projects } from '~/data/projects'
 
 const route = useRoute()
 const slug = computed(() => String(route.params.slug))
-const project = computed(() => getProject(slug.value))
+
+// Fetch the full list once (server-side) and derive the current + next project
+// from it — one request covers both the page and the "next project" footer link.
+const { data: projects } = await useProjectsList()
+const project = computed(() => projects.value.find(p => p.slug === slug.value))
 
 // A missing slug is a real 404, not a blank page.
 if (!project.value) {
@@ -25,8 +28,9 @@ const marqueeItems = computed(() =>
 
 // The next project, for the footer link (wraps around).
 const nextProject = computed(() => {
-  const i = projects.findIndex(p => p.slug === slug.value)
-  return projects[(i + 1) % projects.length]
+  const list = projects.value
+  const i = list.findIndex(p => p.slug === slug.value)
+  return list[(i + 1) % list.length]
 })
 
 useHead(() => ({
@@ -48,10 +52,6 @@ useHead(() => ({
         <h1 class="proj__title">{{ project.title }}</h1>
         <p class="proj__tagline">{{ project.tagline }}</p>
         <p class="proj__summary">{{ project.summary }}</p>
-
-        <ul class="proj__tech">
-          <li v-for="t in project.tech" :key="t">{{ t }}</li>
-        </ul>
 
         <div class="proj__links">
           <f-btn
@@ -113,10 +113,6 @@ useHead(() => ({
 
       <aside class="proj__aside">
         <div class="proj__aside-card">
-          <h3>Built with</h3>
-          <ul class="proj__aside-tech">
-            <li v-for="t in project.tech" :key="t">{{ t }}</li>
-          </ul>
           <h3>Links</h3>
           <ul class="proj__aside-links">
             <li v-for="l in project.links" :key="l.url">
@@ -209,21 +205,6 @@ useHead(() => ({
   max-width: 48ch;
   line-height: 1.65;
   color: rgba(var(--fui-theme-on-surface), 0.65);
-}
-.proj__tech {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin: 20px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.proj__tech li {
-  font-size: 0.75rem;
-  padding: 4px 11px;
-  border-radius: var(--fui-radius-pill, 999px);
-  background: rgba(var(--fui-theme-on-surface), 0.08);
-  color: rgba(var(--fui-theme-on-surface), 0.82);
 }
 .proj__links {
   display: flex;
@@ -321,21 +302,6 @@ useHead(() => ({
 }
 .proj__aside-card h3:not(:first-child) {
   margin-top: 22px;
-}
-.proj__aside-tech {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.proj__aside-tech li {
-  font-size: 0.74rem;
-  padding: 3px 9px;
-  border-radius: var(--fui-radius-pill, 999px);
-  background: rgba(var(--fui-theme-on-surface), 0.08);
-  color: rgba(var(--fui-theme-on-surface), 0.85);
 }
 .proj__aside-links {
   margin: 0;

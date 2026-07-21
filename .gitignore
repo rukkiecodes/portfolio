@@ -5,3 +5,11 @@ dist
 .nuxt
 .output
 .data
+.env
+.env.*
+.vercel
+
+.vercel
+
+# Local Netlify folder
+.netlify

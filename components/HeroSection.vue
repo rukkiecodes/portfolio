@@ -1,5 +1,9 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { profile, socials } from '~/data/site'
+
+const { data: siteAssets } = useSiteAssets()
+const portrait = computed(() => siteAssets.value?.portrait)
 </script>
 
 <template>
@@ -12,7 +16,7 @@ import { profile, socials } from '~/data/site'
         </div>
 
         <h1 class="hero__title">
-          Hi, I'm <b>{{ profile.name }}</b>
+          Hi, I'm <b>{{ profile.firstName }}</b>
         </h1>
         <p class="hero__role">{{ profile.role }}, {{ profile.years }}</p>
         <p class="hero__intro">{{ profile.intro }}</p>
@@ -40,7 +44,12 @@ import { profile, socials } from '~/data/site'
       <div class="hero__stage">
         <div class="hero__portrait">
           <f-glass :radius="28" :blur="2" :depth="10" interactive>
-            <img src="/portrait.png" alt="rukkiecodes portrait" class="hero__portrait-img" />
+            <img
+              v-if="portrait"
+              :src="portrait.url"
+              :alt="portrait.alt || 'rukkiecodes portrait'"
+              class="hero__portrait-img"
+            />
           </f-glass>
         </div>
 

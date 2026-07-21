@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { projects } from '~/data/projects'
+const { data: projects } = useProjectsList()
 </script>
 
 <template>
@@ -9,8 +9,7 @@ import { projects } from '~/data/projects'
         <span class="sec-head__eyebrow">[ Work ]</span>
         <h2 class="sec-head__title">Selected work</h2>
         <p class="sec-head__copy">
-          Shipped products — telemedicine, verified attendance, AI tooling, an open-source design
-          system, and browser tools. Real apps, in real stores and repos.
+          A selection of what I've built — each one shipped, and each one solving a real problem.
         </p>
       </header>
 
@@ -32,9 +31,6 @@ import { projects } from '~/data/projects'
                 <f-icon icon="arrow-up-right" size="small" class="work-card__arrow" />
               </h3>
               <p class="work-card__tagline">{{ p.tagline }}</p>
-              <ul class="work-card__tech">
-                <li v-for="t in p.tech.slice(0, 4)" :key="t">{{ t }}</li>
-              </ul>
             </div>
           </f-glass>
         </NuxtLink>
@@ -123,20 +119,5 @@ import { projects } from '~/data/projects'
   font-size: 0.92rem;
   line-height: 1.5;
   color: rgba(var(--fui-theme-on-surface), 0.65);
-}
-.work-card__tech {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.work-card__tech li {
-  font-size: 0.72rem;
-  padding: 3px 9px;
-  border-radius: var(--fui-radius-pill, 999px);
-  background: rgba(var(--fui-theme-on-surface), 0.06);
-  color: rgba(var(--fui-theme-on-surface), 0.7);
 }
 </style>

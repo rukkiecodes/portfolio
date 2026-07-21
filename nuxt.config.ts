@@ -9,6 +9,14 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt'],
 
+  // Backend API that serves projects (from Supabase) and asset URLs (from
+  // Cloudinary). Override in production with NUXT_PUBLIC_API_BASE.
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:4000',
+    },
+  },
+
   app: {
     head: {
       title: 'rukkiecodes — Senior software developer',
@@ -30,10 +38,14 @@ export default defineNuxtConfig({
             'AI-powered products, cross-platform mobile, full-stack web, and dev tools. 10+ years shipping.',
         },
         { property: 'og:type', content: 'website' },
-        { property: 'og:image', content: '/portrait.png' },
+        {
+          property: 'og:image',
+          content:
+            'https://res.cloudinary.com/bs4nltus/image/upload/rukkiecodes/site/portrait.png',
+        },
       ],
       link: [
-        { rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+        { rel: 'icon', href: '/favicon.ico', type: 'image/x-icon' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {

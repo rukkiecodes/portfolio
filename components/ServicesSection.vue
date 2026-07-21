@@ -9,8 +9,7 @@ import { services } from '~/data/site'
         <span class="sec-head__eyebrow">[ Expertise ]</span>
         <h2 class="sec-head__title">What I do</h2>
         <p class="sec-head__copy">
-          Senior-level delivery across the stack — from AI-powered products to cross-platform
-          mobile, full-stack web, and the tools in between.
+          A handful of things I do well — each owned end to end, from architecture to what ships.
         </p>
       </header>
 

@@ -9,8 +9,8 @@ import { experiences } from '~/data/site'
         <span class="sec-head__eyebrow">[ Experience ]</span>
         <h2 class="sec-head__title">Where I've worked</h2>
         <p class="sec-head__copy">
-          10+ years across product teams, R&amp;D, and full-stack delivery — shipping AI-powered
-          products, cross-platform mobile, and full-stack web for private and government clients.
+          Ten years of building, shipping, and leading — from hands-on front-end work to heading
+          R&amp;D and co-founding a studio, across private and government mandates.
         </p>
       </header>
 
