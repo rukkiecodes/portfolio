@@ -70,6 +70,11 @@ const trendingBusy = ref(false)
 const work = ref<WorkProject[]>([])
 const seed = ref<Seed | null>(null)
 const seedTone = ref<Tone | null>(null)
+const seedLength = ref<Length | null>(null)
+// "Make it yours" details
+const detailAngle = ref('')
+const detailLinks = ref('')
+const detailExtra = ref('')
 
 const TONES: Tone[] = [
   { label: 'Professional', hint: 'polished, credible, industry-savvy' },
@@ -140,40 +145,66 @@ async function loadTrending() {
 
 /* --------------------------- source wizard --------------------------- */
 
+function resetWizard() {
+  seedTone.value = null
+  seedLength.value = null
+  detailAngle.value = ''
+  detailLinks.value = ''
+  detailExtra.value = ''
+}
 function pickTopic(t: Topic) {
   seed.value = { kind: 'trend', title: t.title, context: t.description || '' }
-  seedTone.value = null
+  resetWizard()
   error.value = ''
 }
 function pickProject(p: WorkProject) {
   const context = [p.tagline, p.summary, (p.body || '').slice(0, 2500)].filter(Boolean).join('\n\n')
   seed.value = { kind: 'project', title: p.title, context }
-  seedTone.value = null
+  resetWizard()
   error.value = ''
 }
 function chooseTone(tone: Tone) {
   seedTone.value = tone
 }
+function chooseLength(len: Length) {
+  // advance to the "make it yours" step instead of generating immediately
+  seedLength.value = len
+}
 function cancelWizard() {
   seed.value = null
-  seedTone.value = null
+  resetWizard()
 }
-async function chooseLength(len: Length) {
+
+async function generateFromWizard() {
   const s = seed.value
   const tone = seedTone.value
-  if (!s || !tone) return
+  const len = seedLength.value
+  if (!s || !tone || !len) return
   busy.value = 'text'
   error.value = ''
   try {
-    const prompt =
+    const base =
       s.kind === 'project'
-        ? `Write a LinkedIn post about a project I built called "${s.title}". Here is the full context about it:\n\n${s.context}\n\nWrite it in first person as the builder — what it does, the problem it solves, and why it's worth checking out. Do not invent facts beyond the context. Make it ready to publish.`
-        : `Write a LinkedIn post about this trending topic: "${s.title}". Context: ${s.context}. Make it a compelling, first-person take that's ready to publish.`
+        ? `Write a LinkedIn post about a project I built called "${s.title}". Here is the full context about it:\n\n${s.context}\n\nWrite it in first person as the builder — what it does, the problem it solves, and why it's worth checking out. Do not invent facts beyond the context.`
+        : `Write a LinkedIn post about this trending topic: "${s.title}". Context: ${s.context}. Make it a compelling, first-person take.`
+
+    const extras: string[] = []
+    if (detailAngle.value.trim())
+      extras.push(`How I want it phrased (my voice and angle — follow this closely): ${detailAngle.value.trim()}`)
+    if (detailExtra.value.trim())
+      extras.push(`Also weave in these points/details naturally: ${detailExtra.value.trim()}`)
+    if (detailLinks.value.trim())
+      extras.push(
+        `Include these links, each on its own line so LinkedIn shows a preview: ${detailLinks.value.trim()}`
+      )
+
+    const prompt = [base, ...extras].join('\n\n') + '\n\nMake it ready to publish.'
+
     const { text } = await apiFetch<{ text: string }>('/api/admin/ai/generate-text', {
       method: 'POST',
       body: {
         prompt,
-        system: `You are a senior software developer writing a LinkedIn post. Tone: ${tone.label} — ${tone.hint}. Length: ${len.instruction} Be authentic and first person. No hashtags unless natural.`,
+        system: `You are a senior software developer's social media manager, writing a LinkedIn post people actually stop to read. Tone: ${tone.label} — ${tone.hint}. Length: ${len.instruction} Open with a strong, scroll-stopping hook on the first line. Use short lines and white space for readability. Be authentic and first person — never generic or corporate-boring. Preserve any links given, on their own line. No hashtags unless natural.`,
       },
     })
     current.value = { body: text, media: [] }
@@ -375,6 +406,37 @@ onMounted(() => {
             <b>{{ seed.title }}</b>
           </p>
           <p v-if="busy === 'text'" class="wiz__loading">Writing your post…</p>
+
+          <!-- step 3: make it yours -->
+          <template v-else-if="seedTone && seedLength">
+            <p class="wiz__q">Make it yours ✨ <span class="muted">— all optional</span></p>
+
+            <label class="wiz__label">How should it be phrased? Your voice, angle, key points</label>
+            <textarea
+              v-model="detailAngle"
+              class="field field--area"
+              rows="2"
+              placeholder="e.g. punchy and first-person; focus on the offline feature; end with a question"
+            />
+
+            <label class="wiz__label">Links to add (video, demo, article)</label>
+            <input v-model="detailLinks" class="field" placeholder="https://…  (one per line)" />
+
+            <label class="wiz__label">Anything else to mention? (stats, a story, a call to action)</label>
+            <textarea
+              v-model="detailExtra"
+              class="field field--area"
+              rows="2"
+              placeholder="e.g. 2,000+ on the waitlist; ask readers to DM for early access"
+            />
+
+            <div class="wiz__actions">
+              <button class="btn btn--primary btn--wide" @click="generateFromWizard">Write it ✨</button>
+              <button class="wiz__back" @click="seedLength = null">← length</button>
+            </div>
+          </template>
+
+          <!-- step 2: length -->
           <template v-else-if="seedTone">
             <p class="wiz__q">How long should it be?</p>
             <div class="chips">
@@ -384,6 +446,8 @@ onMounted(() => {
             </div>
             <button class="wiz__back" @click="seedTone = null">← tone</button>
           </template>
+
+          <!-- step 1: tone -->
           <template v-else>
             <p class="wiz__q">How should it sound?</p>
             <div class="chips">
@@ -650,6 +714,28 @@ onMounted(() => {
   margin: 6px 0;
   color: rgb(var(--fui-theme-primary));
   font-size: 0.9rem;
+}
+.wiz__label {
+  display: block;
+  margin: 12px 0 5px;
+  font-size: 0.8rem;
+  color: rgba(var(--fui-theme-on-surface), 0.7);
+}
+.field--area {
+  width: 100%;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+.wiz__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+}
+.btn--wide {
+  flex: 0 0 auto;
+  padding: 11px 24px;
 }
 
 /* chips */
