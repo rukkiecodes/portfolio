@@ -4,8 +4,11 @@ import { ref, computed, onMounted } from 'vue'
 definePageMeta({ layout: 'studio', middleware: 'studio-auth' })
 
 interface Media {
+  type?: 'image' | 'video' | 'article'
   url: string
   alt?: string
+  title?: string
+  description?: string
 }
 interface Target {
   platform: string
@@ -60,6 +63,12 @@ const error = ref('')
 const publishedUrl = ref('')
 const showDrafts = ref(false)
 
+// link/article attachment form
+const showLink = ref(false)
+const linkUrl = ref('')
+const linkTitle = ref('')
+const linkDesc = ref('')
+
 const linkedin = ref<{ connected: boolean; displayName?: string; expiresAt?: string }>({
   connected: false,
 })
@@ -94,6 +103,10 @@ const LENGTHS: Length[] = [
 ]
 
 const overLimit = computed(() => current.value.body.length > LINKEDIN_LIMIT)
+const mediaKind = computed(() => {
+  const m = current.value.media[0]
+  return m ? m.type || 'image' : 'text'
+})
 const canPublish = computed(
   () => linkedin.value.connected && !overLimit.value && (!!current.value.body || current.value.media.length > 0)
 )
@@ -265,30 +278,91 @@ async function generateText() {
 
 /* ------------------------------ media ------------------------------ */
 
-function onFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = async () => {
-    busy.value = 'upload'
-    error.value = ''
-    try {
-      const media = await apiFetch<Media>('/api/admin/uploads', {
-        method: 'POST',
-        body: { dataUrl: reader.result, alt: file.name },
-      })
-      current.value.media.push(media)
-      notify('Image added')
-    } catch (err) {
-      fail(err)
-    } finally {
-      busy.value = ''
-    }
-  }
-  reader.readAsDataURL(file)
+// Upload straight from the browser to Cloudinary using a short-lived signature
+// from our API (keeps large files off the serverless request body).
+async function uploadToCloudinary(file: File, resourceType: 'image' | 'video'): Promise<string> {
+  const sign = await apiFetch<{
+    signature: string
+    timestamp: number
+    folder: string
+    apiKey: string
+    cloudName: string
+  }>('/api/admin/uploads/sign')
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('api_key', sign.apiKey)
+  fd.append('timestamp', String(sign.timestamp))
+  fd.append('signature', sign.signature)
+  fd.append('folder', sign.folder)
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${sign.cloudName}/${resourceType}/upload`, {
+    method: 'POST',
+    body: fd,
+  })
+  if (!res.ok) throw new Error(`Upload failed (${res.status})`)
+  return (await res.json()).secure_url as string
 }
+
+async function onImages(e: Event) {
+  const input = e.target as HTMLInputElement
+  const files = Array.from(input.files || [])
+  input.value = ''
+  if (!files.length) return
+  busy.value = 'upload'
+  error.value = ''
+  try {
+    if (mediaKind.value !== 'image') current.value.media = [] // one media type per post
+    for (const f of files.slice(0, 20)) {
+      const url = await uploadToCloudinary(f, 'image')
+      current.value.media.push({ type: 'image', url, alt: f.name })
+    }
+    notify('Image added')
+  } catch (err) {
+    fail(err)
+  } finally {
+    busy.value = ''
+  }
+}
+
+async function onVideo(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  busy.value = 'upload'
+  error.value = ''
+  try {
+    const url = await uploadToCloudinary(file, 'video')
+    current.value.media = [{ type: 'video', url, alt: file.name }]
+    notify('Video added')
+  } catch (err) {
+    fail(err)
+  } finally {
+    busy.value = ''
+  }
+}
+
+function attachLink() {
+  if (!linkUrl.value.trim()) return
+  current.value.media = [
+    {
+      type: 'article',
+      url: linkUrl.value.trim(),
+      title: linkTitle.value.trim(),
+      description: linkDesc.value.trim(),
+    },
+  ]
+  showLink.value = false
+  linkUrl.value = ''
+  linkTitle.value = ''
+  linkDesc.value = ''
+  notify('Link attached')
+}
+
 function removeMedia(i: number) {
   current.value.media.splice(i, 1)
+}
+function clearMedia() {
+  current.value.media = []
 }
 
 /* --------------------------- save / publish --------------------------- */
@@ -553,18 +627,46 @@ onMounted(() => {
 
           <textarea v-model="current.body" class="body" rows="9" placeholder="Write your post…" />
           <div class="meta-row">
-            <label class="btn btn--ghost btn--sm add-img">
-              {{ busy === 'upload' ? 'Uploading…' : '＋ Image' }}
-              <input type="file" accept="image/*" hidden @change="onFile" />
-            </label>
+            <div class="attach">
+              <label class="btn btn--ghost btn--sm">
+                🖼 Image
+                <input type="file" accept="image/*" multiple hidden @change="onImages" />
+              </label>
+              <label class="btn btn--ghost btn--sm">
+                🎬 Video
+                <input type="file" accept="video/*" hidden @change="onVideo" />
+              </label>
+              <button class="btn btn--ghost btn--sm" @click="showLink = !showLink">🔗 Link</button>
+              <span v-if="busy === 'upload'" class="muted upl">Uploading…</span>
+            </div>
             <span class="count" :class="{ over: overLimit }">{{ current.body.length }} / {{ LINKEDIN_LIMIT }}</span>
           </div>
 
-          <div v-if="current.media.length" class="thumbs">
+          <!-- link/article attachment -->
+          <div v-if="showLink" class="linkform">
+            <input v-model="linkUrl" class="field" placeholder="https://link-to-share.com" />
+            <input v-model="linkTitle" class="field" placeholder="Title (optional)" />
+            <input v-model="linkDesc" class="field" placeholder="Description (optional)" />
+            <button class="btn btn--primary btn--sm" @click="attachLink">Attach link</button>
+          </div>
+
+          <!-- previews (one media type per post) -->
+          <div v-if="mediaKind === 'image'" class="thumbs">
             <div v-for="(m, i) in current.media" :key="m.url" class="thumb">
               <img :src="m.url" :alt="m.alt || ''" />
               <button class="thumb__x" @click="removeMedia(i)">×</button>
             </div>
+          </div>
+          <div v-else-if="mediaKind === 'video'" class="videobox">
+            <video :src="current.media[0].url" controls preload="metadata" />
+            <button class="thumb__x" @click="clearMedia">×</button>
+          </div>
+          <div v-else-if="mediaKind === 'article'" class="artcard">
+            <div class="artcard__main">
+              <span class="artcard__title">🔗 {{ current.media[0].title || current.media[0].url }}</span>
+              <span class="artcard__url">{{ current.media[0].url }}</span>
+            </div>
+            <button class="thumb__x artcard__x" @click="clearMedia">×</button>
           </div>
 
           <p v-if="error" class="error">{{ error }}</p>
@@ -901,9 +1003,70 @@ onMounted(() => {
 .count.over {
   color: rgb(var(--fui-theme-error, 220 60 60));
 }
-.add-img {
-  display: inline-flex;
+.attach {
+  display: flex;
   align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.upl {
+  font-size: 0.78rem;
+}
+.linkform {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(var(--fui-theme-on-surface), 0.12);
+  background: rgba(var(--fui-theme-on-surface), 0.03);
+}
+.linkform .btn {
+  align-self: flex-start;
+}
+.videobox {
+  position: relative;
+  margin-top: 12px;
+  max-width: 320px;
+}
+.videobox video {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  border: 1px solid rgba(var(--fui-theme-on-surface), 0.15);
+}
+.artcard {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--fui-theme-on-surface), 0.15);
+  background: rgba(var(--fui-theme-on-surface), 0.03);
+}
+.artcard__main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.artcard__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.artcard__url {
+  font-size: 0.78rem;
+  color: rgba(var(--fui-theme-on-surface), 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.artcard__x {
+  position: static;
+  flex: 0 0 auto;
 }
 .thumbs {
   display: flex;
