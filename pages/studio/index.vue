@@ -72,6 +72,9 @@ const seed = ref<Seed | null>(null)
 const seedTone = ref<Tone | null>(null)
 const seedLength = ref<Length | null>(null)
 // "Make it yours" details
+const detailAudience = ref('')
+const detailGoal = ref('')
+const detailHook = ref('')
 const detailAngle = ref('')
 const detailLinks = ref('')
 const detailExtra = ref('')
@@ -148,6 +151,9 @@ async function loadTrending() {
 function resetWizard() {
   seedTone.value = null
   seedLength.value = null
+  detailAudience.value = ''
+  detailGoal.value = ''
+  detailHook.value = ''
   detailAngle.value = ''
   detailLinks.value = ''
   detailExtra.value = ''
@@ -189,6 +195,9 @@ async function generateFromWizard() {
         : `Write a LinkedIn post about this trending topic: "${s.title}". Context: ${s.context}. Make it a compelling, first-person take.`
 
     const extras: string[] = []
+    if (detailAudience.value) extras.push(`Write it for this audience: ${detailAudience.value}.`)
+    if (detailGoal.value) extras.push(`The goal of this post is to ${detailGoal.value.toLowerCase()}.`)
+    if (detailHook.value) extras.push(`Open the post with ${detailHook.value.toLowerCase()}.`)
     if (detailAngle.value.trim())
       extras.push(`How I want it phrased (my voice and angle — follow this closely): ${detailAngle.value.trim()}`)
     if (detailExtra.value.trim())
@@ -410,6 +419,41 @@ onMounted(() => {
           <!-- step 3: make it yours -->
           <template v-else-if="seedTone && seedLength">
             <p class="wiz__q">Make it yours ✨ <span class="muted">— all optional</span></p>
+
+            <div class="wiz__selects">
+              <label class="sel">
+                <span>Audience</span>
+                <select v-model="detailAudience" class="field">
+                  <option value="">Anyone</option>
+                  <option>Founders &amp; startups</option>
+                  <option>Developers</option>
+                  <option>Recruiters</option>
+                  <option>Potential clients</option>
+                  <option>Investors</option>
+                </select>
+              </label>
+              <label class="sel">
+                <span>Goal</span>
+                <select v-model="detailGoal" class="field">
+                  <option value="">Just share</option>
+                  <option>build authority</option>
+                  <option>drive signups</option>
+                  <option>get clients</option>
+                  <option>start a debate</option>
+                  <option>attract hires</option>
+                </select>
+              </label>
+              <label class="sel">
+                <span>Hook</span>
+                <select v-model="detailHook" class="field">
+                  <option value="">Auto</option>
+                  <option>a question</option>
+                  <option>a bold claim</option>
+                  <option>a personal story</option>
+                  <option>a surprising stat</option>
+                </select>
+              </label>
+            </div>
 
             <label class="wiz__label">How should it be phrased? Your voice, angle, key points</label>
             <textarea
@@ -720,6 +764,30 @@ onMounted(() => {
   margin: 12px 0 5px;
   font-size: 0.8rem;
   color: rgba(var(--fui-theme-on-surface), 0.7);
+}
+.wiz__selects {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+@media (max-width: 480px) {
+  .wiz__selects {
+    grid-template-columns: 1fr;
+  }
+}
+.sel span {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 4px;
+  color: rgba(var(--fui-theme-on-surface), 0.6);
+}
+.sel select.field {
+  width: 100%;
+  cursor: pointer;
+}
+.sel select.field option {
+  color: initial;
 }
 .field--area {
   width: 100%;
